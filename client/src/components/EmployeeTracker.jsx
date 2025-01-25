@@ -167,7 +167,7 @@ const EmployeeTracker = () => {
           <CardTitle>Employee Management System</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={value => setActiveTab(value)}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="employees">Employees</TabsTrigger>
               <TabsTrigger value="roles">Roles</TabsTrigger>
