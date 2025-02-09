@@ -237,38 +237,121 @@ const EmployeeTracker = () => {
     );
   };
 
-  const EmployeeTable = ({ employees }) => (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse bg-white">
-        <thead>
-          <tr className="border-b">
-            <th className="px-4 py-2 text-left font-semibold">Name</th>
-            <th className="px-4 py-2 text-left font-semibold">Role</th>
-            <th className="px-4 py-2 text-left font-semibold">Department</th>
-            <th className="px-4 py-2 text-left font-semibold">Salary</th>
-            <th className="px-4 py-2 text-left font-semibold">Manager</th>
-            <th className="px-4 py-2 text-left font-semibold">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {employees.map(employee => (
-            <tr key={employee.id} className="border-b hover:bg-gray-50">
-              <td className="px-4 py-2">{`${employee.first_name} ${employee.last_name}`}</td>
-              <td className="px-4 py-2">{employee.title}</td>
-              <td className="px-4 py-2">{employee.department}</td>
-              <td className="px-4 py-2">${employee.salary?.toLocaleString()}</td>
-              <td className="px-4 py-2">{employee.manager || 'None'}</td>
-              <td className="px-4 py-2">
-                <Button variant="outline" size="sm" onClick={() => {}}>
-                  <RefreshCcw className="h-4 w-4" />
+  const UpdateEmployeeModal = ({ employee, onClose, onUpdate }) => {
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      try {
+        const roleId = parseInt(e.target.role.value);
+        const selectedRole = roles.find(r => r.id === roleId);
+        
+        await api.updateEmployeeRole(employee.id, roleId);
+        
+        // Update the employee in the local state with new role info
+        const updatedEmployee = {
+          ...employee,
+          title: selectedRole.title,
+          department: selectedRole.department,
+          salary: selectedRole.salary
+        };
+        
+        onUpdate(updatedEmployee);
+        onClose();
+        setMessage('Employee role updated successfully');
+      } catch (error) {
+        console.error('Error updating employee:', error);
+        setMessage('Failed to update employee role');
+      }
+    };
+  
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-50">
+      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
+      <Card className="relative bg-white max-w-md w-full mx-4">
+        <CardHeader>
+        <CardTitle>Update Role for {employee.first_name} {employee.last_name}</CardTitle>
+        </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <select 
+                name="role" 
+                className="w-full p-2 border rounded"
+                defaultValue={roles.find(r => r.title === employee.title)?.id}
+                required
+              >
+                <option value="">Select New Role</option>
+                {roles.map(role => (
+                  <option key={role.id} value={role.id}>
+                    {role.title}
+                  </option>
+                ))}
+              </select>
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={onClose}>
+                  Cancel
                 </Button>
-              </td>
+                <Button type="submit">Update Role</Button>
+              </div>
+            </form>
+          </CardContent>
+        
+      </Card>
+      </div>
+    );
+  };
+
+  const EmployeeTable = ({ employees }) => {
+    const [selectedEmployee, setSelectedEmployee] = useState(null);
+  
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse bg-white">
+          <thead>
+            <tr className="border-b">
+              <th className="px-4 py-2 text-left font-semibold">Name</th>
+              <th className="px-4 py-2 text-left font-semibold">Role</th>
+              <th className="px-4 py-2 text-left font-semibold">Department</th>
+              <th className="px-4 py-2 text-left font-semibold">Salary</th>
+              <th className="px-4 py-2 text-left font-semibold">Manager</th>
+              <th className="px-4 py-2 text-left font-semibold">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+          </thead>
+          <tbody>
+            {employees.map(employee => (
+              <tr key={employee.id} className="border-b hover:bg-gray-50">
+                <td className="px-4 py-2">{`${employee.first_name} ${employee.last_name}`}</td>
+                <td className="px-4 py-2">{employee.title}</td>
+                <td className="px-4 py-2">{employee.department}</td>
+                <td className="px-4 py-2">${employee.salary?.toLocaleString()}</td>
+                <td className="px-4 py-2">{employee.manager || 'None'}</td>
+                <td className="px-4 py-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setSelectedEmployee(employee)}
+                  >
+                    <RefreshCcw className="h-4 w-4" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+  
+        {selectedEmployee && (
+          <UpdateEmployeeModal
+            employee={selectedEmployee}
+            onClose={() => setSelectedEmployee(null)}
+            onUpdate={(updatedEmployee) => {
+              setEmployees(prev => 
+                prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp)
+              );
+              setSelectedEmployee(null);
+            }}
+          />
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
