@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, RefreshCcw } from 'lucide-react';
+import { api } from '../utils/api';
 
 const EmployeeTracker = () => {
   const [activeTab, setActiveTab] = useState('employees');
@@ -19,42 +20,63 @@ const EmployeeTracker = () => {
 
   // Mock data for demonstration
   useEffect(() => {
-    setDepartments([
-      { id: 1, name: 'Engineering' },
-      { id: 2, name: 'Sales' },
-      { id: 3, name: 'Finance' }
-    ]);
-    setRoles([
-      { id: 1, title: 'Engineering Manager', salary: 120000, department: 'Engineering' },
-      { id: 2, title: 'Software Engineer', salary: 80000, department: 'Engineering' },
-      { id: 3, title: 'Sales Manager', salary: 110000, department: 'Sales' }
-    ]);
-    setEmployees([
-      { id: 1, first_name: 'Miranda', last_name: 'Seedgood', title: 'Engineering Manager', department: 'Engineering', salary: 120000, manager: null },
-      { id: 2, first_name: 'John', last_name: 'Doe', title: 'Software Engineer', department: 'Engineering', salary: 80000, manager: 'Miranda' }
-    ]);
+    const fetchData = async () => {
+      try {
+        const [departmentsData, rolesData, employeesData] = await Promise.all([
+          api.getDepartments(),
+          api.getRoles(),
+          api.getEmployees()
+        ]);
+        
+        setDepartments(departmentsData);
+        setRoles(rolesData);
+        setEmployees(employeesData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setMessage('Failed to load data');
+      }
+    };
+  
+    fetchData();
   }, []);
 
   const AddEmployeeForm = () => {
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
       e.preventDefault();
-      const roleId = e.target.role.value;
-      const managerId = e.target.manager.value;
-      const selectedRole = roles.find(r => r.id === parseInt(roleId));
-      const selectedManager = employees.find(e => e.id === parseInt(managerId));
+      try {
+        const selectedRole = roles.find(r => r.id === parseInt(e.target.role.value));
+        const managerId = e.target.manager.value;
+        const selectedManager = managerId ? 
+          employees.find(e => e.id === parseInt(managerId)) : null;
     
-      const newEmployee = {
-        id: employees.length + 1,
-        first_name: e.target.firstName.value,
-        last_name: e.target.lastName.value,
-        title: selectedRole?.title || 'New Role',
-        department: selectedRole?.department || 'New Department',
-        salary: selectedRole?.salary || 0,
-        manager: selectedManager ? selectedManager.first_name : null
-      };
-      
-      setEmployees(prev => [...prev, newEmployee]);
-      setShowEmployeeForm(false);
+        const newEmployee = await api.addEmployee({
+          first_name: e.target.firstName.value,
+          last_name: e.target.lastName.value,
+          role_id: parseInt(e.target.role.value),
+          manager_id: managerId ? parseInt(managerId) : null
+        });
+    
+        // Format the employee data to match our frontend structure
+        const formattedEmployee = {
+          ...newEmployee,
+          title: selectedRole.title,
+          department: selectedRole.department,
+          salary: selectedRole.salary,
+          manager: selectedManager ? selectedManager.first_name : null
+        };
+        
+        // Update local state with formatted employee
+        setEmployees(prev => {
+          const newState = [...prev, formattedEmployee];
+          console.log('Updated employees state:', newState);
+          return newState;
+        });
+        setShowEmployeeForm(false);
+        setMessage('Employee added successfully');
+      } catch (error) {
+        console.error('Error adding employee:', error);
+        setMessage('Failed to add employee');
+      }
     };
   
     return (
@@ -89,18 +111,20 @@ const EmployeeTracker = () => {
               ))}
             </select>
             <select 
-  name="manager" 
-  className="w-full p-2 border rounded mt-4"
->
-  <option value="">Select Manager (Optional)</option>
-  {employees.map(emp => (
-    <option key={emp.id} value={emp.id}>
-      {`${emp.first_name} ${emp.last_name}`}
-    </option>
-  ))}
-</select>
+              name="manager" 
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Select Manager (Optional)</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.id}>
+                  {`${emp.first_name} ${emp.last_name}`}
+                </option>
+              ))}
+            </select>
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setShowEmployeeForm(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setShowEmployeeForm(false)}>
+                Cancel
+              </Button>
               <Button type="submit">Add Employee</Button>
             </div>
           </form>
@@ -110,20 +134,23 @@ const EmployeeTracker = () => {
   };
 
   const AddRoleForm = () => {
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
       e.preventDefault();
-      const departmentId = e.target.department.value;
-      const selectedDepartment = departments.find(d => d.id === parseInt(departmentId));
-  
-      const newRole = {
-        id: roles.length + 1,
-        title: e.target.title.value,
-        salary: parseFloat(e.target.salary.value),
-        department: selectedDepartment?.name || 'New Department'
-      };
-      
-      setRoles(prev => [...prev, newRole]);
-      setShowRoleForm(false);
+      try {
+        const newRole = await api.addRole({
+          title: e.target.title.value,
+          salary: parseFloat(e.target.salary.value),
+          department_id: parseInt(e.target.department.value)
+        });
+        
+        // Update local state with new role
+        setRoles(prev => [...prev, newRole]);
+        setShowRoleForm(false);
+        setMessage('Role added successfully');
+      } catch (error) {
+        console.error('Error adding role:', error);
+        setMessage('Failed to add role');
+      }
     };
   
     return (
@@ -157,11 +184,11 @@ const EmployeeTracker = () => {
               ))}
             </select>
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setShowRoleForm(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setShowRoleForm(false)}>
+                Cancel
+              </Button>
               <Button type="submit">Add Role</Button>
-              
             </div>
-            
           </form>
         </CardContent>
       </Card>
@@ -169,14 +196,21 @@ const EmployeeTracker = () => {
   };
 
   const AddDepartmentForm = () => {
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
       e.preventDefault();
-      const newDepartment = {
-        id: departments.length + 1,
-        name: e.target.name.value
-      };
-      setDepartments(prev => [...prev, newDepartment]);
-      setShowDepartmentForm(false);
+      try {
+        const newDepartment = await api.addDepartment({
+          name: e.target.name.value
+        });
+        
+        // Update local state with new department
+        setDepartments(prev => [...prev, newDepartment]);
+        setShowDepartmentForm(false);
+        setMessage('Department added successfully');
+      } catch (error) {
+        console.error('Error adding department:', error);
+        setMessage('Failed to add department');
+      }
     };
   
     return (
@@ -192,7 +226,9 @@ const EmployeeTracker = () => {
               required
             />
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setShowDepartmentForm(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setShowDepartmentForm(false)}>
+                Cancel
+              </Button>
               <Button type="submit">Add Department</Button>
             </div>
           </form>
@@ -201,7 +237,7 @@ const EmployeeTracker = () => {
     );
   };
 
-  const EmployeeTable = () => (
+  const EmployeeTable = ({ employees }) => (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse bg-white">
         <thead>
@@ -220,7 +256,7 @@ const EmployeeTracker = () => {
               <td className="px-4 py-2">{`${employee.first_name} ${employee.last_name}`}</td>
               <td className="px-4 py-2">{employee.title}</td>
               <td className="px-4 py-2">{employee.department}</td>
-              <td className="px-4 py-2">${employee.salary.toLocaleString()}</td>
+              <td className="px-4 py-2">${employee.salary?.toLocaleString()}</td>
               <td className="px-4 py-2">{employee.manager || 'None'}</td>
               <td className="px-4 py-2">
                 <Button variant="outline" size="sm" onClick={() => {}}>
@@ -273,7 +309,7 @@ const EmployeeTracker = () => {
       </Button>
     </div>
     {showEmployeeForm && <AddEmployeeForm />}
-    <EmployeeTable />
+    <EmployeeTable employees={employees} />
   </div>
 )}
 
