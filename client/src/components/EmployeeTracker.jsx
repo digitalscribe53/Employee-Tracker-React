@@ -44,7 +44,14 @@ const EmployeeTracker = () => {
     const handleSubmit = async (e) => {
       e.preventDefault();
       try {
-        const selectedRole = roles.find(r => r.id === parseInt(e.target.role.value));
+        const roleId = parseInt(e.target.role.value);
+        const selectedRole = roles.find(r => r.id === roleId);
+        console.log('Selected role:', selectedRole);
+    
+        if (!selectedRole) {
+          throw new Error('Selected role not found');
+        }
+    
         const managerId = e.target.manager.value;
         const selectedManager = managerId ? 
           employees.find(e => e.id === parseInt(managerId)) : null;
@@ -52,11 +59,10 @@ const EmployeeTracker = () => {
         const newEmployee = await api.addEmployee({
           first_name: e.target.firstName.value,
           last_name: e.target.lastName.value,
-          role_id: parseInt(e.target.role.value),
+          role_id: roleId,
           manager_id: managerId ? parseInt(managerId) : null
         });
     
-        // Format the employee data to match our frontend structure
         const formattedEmployee = {
           ...newEmployee,
           title: selectedRole.title,
@@ -65,12 +71,7 @@ const EmployeeTracker = () => {
           manager: selectedManager ? selectedManager.first_name : null
         };
         
-        // Update local state with formatted employee
-        setEmployees(prev => {
-          const newState = [...prev, formattedEmployee];
-          console.log('Updated employees state:', newState);
-          return newState;
-        });
+        setEmployees(prev => [...prev, formattedEmployee]);
         setShowEmployeeForm(false);
         setMessage('Employee added successfully');
       } catch (error) {
@@ -137,14 +138,22 @@ const EmployeeTracker = () => {
     const handleSubmit = async (e) => {
       e.preventDefault();
       try {
+        const departmentId = parseInt(e.target.department.value);
+        const selectedDepartment = departments.find(d => d.id === departmentId);
+        
         const newRole = await api.addRole({
           title: e.target.title.value,
           salary: parseFloat(e.target.salary.value),
-          department_id: parseInt(e.target.department.value)
+          department_id: departmentId
         });
+    
+        // Format the role data with department name
+        const formattedRole = {
+          ...newRole,
+          department: selectedDepartment.name  // Make sure department name is included
+        };
         
-        // Update local state with new role
-        setRoles(prev => [...prev, newRole]);
+        setRoles(prev => [...prev, formattedRole]);
         setShowRoleForm(false);
         setMessage('Role added successfully');
       } catch (error) {
@@ -300,6 +309,7 @@ const EmployeeTracker = () => {
   };
 
   const EmployeeTable = ({ employees }) => {
+    console.log('EmployeeTable render, employees:', employees);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
   
     return (
