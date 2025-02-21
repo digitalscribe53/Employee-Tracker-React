@@ -247,63 +247,101 @@ const EmployeeTracker = () => {
   };
 
   const UpdateEmployeeModal = ({ employee, onClose, onUpdate }) => {
+    const [formData, setFormData] = useState({
+      first_name: employee.first_name,
+      last_name: employee.last_name,
+      role_id: roles.find(r => r.title === employee.title)?.id,
+      manager_id: employees.find(e => e.first_name === employee.manager)?.id
+    });
+  
     const handleSubmit = async (e) => {
       e.preventDefault();
       try {
-        const roleId = parseInt(e.target.role.value);
-        const selectedRole = roles.find(r => r.id === roleId);
-        
-        await api.updateEmployeeRole(employee.id, roleId);
-        
-        // Update the employee in the local state with new role info
-        const updatedEmployee = {
+        const selectedRole = roles.find(r => r.id === parseInt(formData.role_id));
+        const selectedManager = employees.find(e => e.id === parseInt(formData.manager_id));
+  
+        const updatedEmployee = await api.updateEmployee(employee.id, {
           ...employee,
-          title: selectedRole.title,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          role_id: parseInt(formData.role_id),
           department: selectedRole.department,
-          salary: selectedRole.salary
-        };
-        
+          salary: selectedRole.salary,
+          manager_id: formData.manager_id ? parseInt(formData.manager_id) : null
+        });
+  
         onUpdate(updatedEmployee);
         onClose();
-        setMessage('Employee role updated successfully');
+        setMessage('Employee updated successfully');
       } catch (error) {
         console.error('Error updating employee:', error);
-        setMessage('Failed to update employee role');
+        setMessage('Failed to update employee');
       }
     };
   
     return (
       <div className="fixed inset-0 flex items-center justify-center z-50">
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
-      <Card className="relative bg-white max-w-md w-full mx-4">
-        <CardHeader>
-        <CardTitle>Update Role for {employee.first_name} {employee.last_name}</CardTitle>
-        </CardHeader>
+        <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
+        <Card className="relative bg-white max-w-md w-full mx-4">
+          <CardHeader>
+            <CardTitle>Update Employee Information</CardTitle>
+          </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input 
+                  name="first_name"
+                  placeholder="First Name"
+                  value={formData.first_name}
+                  onChange={(e) => setFormData({...formData, first_name: e.target.value})}
+                  required
+                />
+                <Input 
+                  name="last_name"
+                  placeholder="Last Name"
+                  value={formData.last_name}
+                  onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+                  required
+                />
+              </div>
               <select 
-                name="role" 
+                name="role"
                 className="w-full p-2 border rounded"
-                defaultValue={roles.find(r => r.title === employee.title)?.id}
+                value={formData.role_id || ''}
+                onChange={(e) => setFormData({...formData, role_id: e.target.value})}
                 required
               >
-                <option value="">Select New Role</option>
+                <option value="">Select Role</option>
                 {roles.map(role => (
                   <option key={role.id} value={role.id}>
                     {role.title}
                   </option>
                 ))}
               </select>
+              <select 
+                name="manager"
+                className="w-full p-2 border rounded"
+                value={formData.manager_id || ''}
+                onChange={(e) => setFormData({...formData, manager_id: e.target.value})}
+              >
+                <option value="">Select Manager (Optional)</option>
+                {employees
+                  .filter(emp => emp.id !== employee.id) // Prevent self-selection as manager
+                  .map(emp => (
+                    <option key={emp.id} value={emp.id}>
+                      {`${emp.first_name} ${emp.last_name}`}
+                    </option>
+                ))}
+              </select>
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button type="submit">Update Role</Button>
+                <Button type="submit">Update Employee</Button>
               </div>
             </form>
           </CardContent>
-        
-      </Card>
+        </Card>
       </div>
     );
   };

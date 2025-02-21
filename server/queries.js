@@ -47,52 +47,46 @@ const addEmployee = async (first_name, last_name, role_id, manager_id) => {
     return res.rows[0];
 };
 
-const updateEmployeeRole = async (employee_id, role_id) => {
-    // Start a transaction
+const updateEmployee = async (id, { first_name, last_name, role_id, manager_id }) => {
     const client = await pool.connect();
     try {
-        await client.query('BEGIN');
-
-        // Update the employee's role
-        await client.query('UPDATE employee SET role_id = $1 WHERE id = $2', [role_id, employee_id]);
-
-        // Get the department_id for the new role
-        const { rows: [{ department_id }] } = await client.query('SELECT department_id FROM role WHERE id = $1', [role_id]);
-
-        // Find the manager (employee with NULL manager_id) for the new department
-        const { rows: [manager] } = await client.query(`
-            SELECT e.id 
-            FROM employee e
-            JOIN role r ON e.role_id = r.id
-            WHERE r.department_id = $1 AND e.manager_id IS NULL
-            LIMIT 1
-        `, [department_id]);
-
-        // Update the employee's manager
-        await client.query('UPDATE employee SET manager_id = $1 WHERE id = $2', [manager ? manager.id : null, employee_id]);
-
-        // Commit the transaction
-        await client.query('COMMIT');
-
-        // Fetch and return the updated employee data
-        const { rows: [updatedEmployee] } = await client.query(`
-            SELECT e.*, r.title as role_title, d.name as department_name, 
-                   CONCAT(m.first_name, ' ', m.last_name) as manager_name
-            FROM employee e
-            JOIN role r ON e.role_id = r.id
-            JOIN department d ON r.department_id = d.id
-            LEFT JOIN employee m ON e.manager_id = m.id
-            WHERE e.id = $1
-        `, [employee_id]);
-
-        return updatedEmployee;
+      await client.query('BEGIN');
+  
+      // Update the employee
+      const res = await client.query(
+        `UPDATE employee 
+         SET first_name = $1, 
+             last_name = $2, 
+             role_id = $3, 
+             manager_id = $4
+         WHERE id = $5
+         RETURNING *`,
+        [first_name, last_name, role_id, manager_id, id]
+      );
+  
+      // Get the complete employee information including role and department
+      const { rows: [updatedEmployee] } = await client.query(`
+        SELECT e.*, 
+               r.title, 
+               r.salary,
+               d.name as department,
+               CONCAT(m.first_name, ' ', m.last_name) as manager_name
+        FROM employee e
+        JOIN role r ON e.role_id = r.id
+        JOIN department d ON r.department_id = d.id
+        LEFT JOIN employee m ON e.manager_id = m.id
+        WHERE e.id = $1
+      `, [id]);
+  
+      await client.query('COMMIT');
+      return updatedEmployee;
     } catch (e) {
-        await client.query('ROLLBACK');
-        throw e;
+      await client.query('ROLLBACK');
+      throw e;
     } finally {
-        client.release();
+      client.release();
     }
-};
+  };
 
 const getRoles = async () => {
     const res = await pool.query('SELECT id, title FROM role');
@@ -116,7 +110,7 @@ module.exports = {
     addDepartment,
     addRole,
     addEmployee,
-    updateEmployeeRole,
+    updateEmployee,
     getRoles,
     getDepartments,
     getEmployees

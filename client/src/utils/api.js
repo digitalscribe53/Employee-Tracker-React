@@ -68,4 +68,16 @@ export const api = {
     if (!response.ok) throw new Error('Failed to update employee role');
     return response.json();
   },
+
+updateEmployee: async (employeeId, employeeData) => {
+  const response = await fetch(`${API_BASE_URL}/employees/${employeeId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(employeeData),
+  });
+  if (!response.ok) throw new Error('Failed to update employee');
+  return response.json();
+},
 };

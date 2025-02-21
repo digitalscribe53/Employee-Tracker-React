@@ -86,17 +86,25 @@ app.post('/api/employees', async (req, res) => {
 });
 
 // Route for updating employee role
-app.put('/api/employees/:id/role', async (req, res) => {
+// Update employee information (all fields)
+app.put('/api/employees/:id', async (req, res) => {
     try {
-        const { id } = req.params;
-        const { role_id } = req.body;
-        const updatedEmployee = await updateEmployeeRole(id, role_id);
-        res.json(updatedEmployee);
+      const { id } = req.params;
+      const { first_name, last_name, role_id, manager_id } = req.body;
+      
+      const updatedEmployee = await updateEmployee(id, { 
+        first_name, 
+        last_name, 
+        role_id, 
+        manager_id 
+      });
+      
+      res.json(updatedEmployee);
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to update employee role' });
+      console.error(err);
+      res.status(500).json({ error: 'Failed to update employee' });
     }
-});
+  });
 
 // Start server
 app.listen(PORT, () => {
