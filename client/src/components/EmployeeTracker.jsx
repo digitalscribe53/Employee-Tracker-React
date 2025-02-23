@@ -247,6 +247,15 @@ const EmployeeTracker = () => {
   };
 
   const UpdateEmployeeModal = ({ employee, onClose, onUpdate }) => {
+    useEffect(() => {
+      // Disable scrolling on mount
+      document.body.style.overflow = 'hidden';
+      
+      // Re-enable scrolling on unmount
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }, []);
     const [formData, setFormData] = useState({
       first_name: employee.first_name,
       last_name: employee.last_name,
@@ -280,14 +289,25 @@ const EmployeeTracker = () => {
     };
   
     return (
-      <div className="fixed inset-0 flex items-center justify-center z-50">
-        <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
-        <Card className="relative bg-white max-w-md w-full mx-4">
-          <CardHeader>
-            <CardTitle>Update Employee Information</CardTitle>
+      <div 
+        className="fixed inset-0 z-50"
+        style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.85)', // Even darker overlay
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)'
+        }}
+      >
+        <Card className="bg-white w-full max-w-md mx-4 shadow-2xl" style={{ backgroundColor: 'white' }}> {/* Force solid white background */}
+          <CardHeader className="bg-white" style={{ backgroundColor: 'white' }}>
+            <CardTitle className="text-black">Update Employee Information</CardTitle>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <CardContent className="bg-white" style={{ backgroundColor: 'white' }}>
+            <form onSubmit={handleSubmit} className="space-y-4 bg-white"> {/* Added bg-white to form */}
               <div className="grid grid-cols-2 gap-4">
                 <Input 
                   name="first_name"

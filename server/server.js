@@ -7,6 +7,7 @@ const {
     addDepartment,
     addRole,
     addEmployee,
+    updateEmployee,
     updateEmployeeRole,
     getRoles,
     getDepartments,
